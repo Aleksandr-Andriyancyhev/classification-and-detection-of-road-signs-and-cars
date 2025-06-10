@@ -274,41 +274,104 @@ class VideoApp:
             for class_name, count in report_data[minute].items():
                 report_text += f"  {class_name}: {count}\n"
         
+        # Создаем JSON структуру
+        report_json = {
+            "video_file": os.path.basename(self.video_path),
+            "duration": str(timedelta(seconds=self.duration)),
+            "detection_data": {f"minute_{minute}": dict(report_data[minute]) 
+                            for minute in sorted(report_data.keys())}
+        }
+        
+        # Создаем CSV данные
+        csv_lines = ["Минута,Класс,Количество"]
+        for minute in sorted(report_data.keys()):
+            for class_name, count in report_data[minute].items():
+                csv_lines.append(f"{minute},{class_name},{count}")
+        report_csv = "\n".join(csv_lines)
+        
         # Показываем отчет в новом окне
         report_window = tk.Toplevel(self.root)
         report_window.title("Отчет по видео")
-        report_window.geometry("600x500")
+        report_window.geometry("700x550")
+        
+        # Фрейм для выбора формата
+        format_frame = ttk.Frame(report_window)
+        format_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(format_frame, text="Формат отчета:").pack(side=tk.LEFT)
+        self.report_format = tk.StringVar(value="txt")
+        ttk.Radiobutton(format_frame, text="TXT", variable=self.report_format, value="txt").pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(format_frame, text="JSON", variable=self.report_format, value="json").pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(format_frame, text="CSV", variable=self.report_format, value="csv").pack(side=tk.LEFT, padx=5)
         
         text_frame = ttk.Frame(report_window)
-        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         
-        text_widget = tk.Text(text_frame, wrap=tk.WORD)
-        text_widget.insert(tk.END, report_text)
-        text_widget.config(state=tk.DISABLED)
+        self.text_widget = tk.Text(text_frame, wrap=tk.WORD)
+        self.text_widget.insert(tk.END, report_text)
+        self.text_widget.config(state=tk.DISABLED)
         
-        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
-        text_widget.configure(yscrollcommand=scrollbar.set)
+        scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=self.text_widget.yview)
+        self.text_widget.configure(yscrollcommand=scrollbar.set)
         
-        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Кнопка сохранения отчета в файл
-        def save_report():
-            file_path = filedialog.asksaveasfilename(
-                defaultextension=".txt",
-                filetypes=[("Текстовые файлы", "*.txt"), ("Все файлы", "*.*")],
-                initialfile=f"report_{os.path.splitext(os.path.basename(self.video_path))[0]}.txt"
-            )
-            if file_path:
-                try:
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(report_text)
-                    messagebox.showinfo("Успех", f"Отчет сохранен в файл:\n{file_path}")
-                except Exception as e:
-                    messagebox.showerror("Ошибка", f"Не удалось сохранить отчет:\n{str(e)}")
+        # Функция обновления отчета при смене формата
+        def update_report_display(*args):
+            self.text_widget.config(state=tk.NORMAL)
+            self.text_widget.delete(1.0, tk.END)
+            
+            if self.report_format.get() == "txt":
+                self.text_widget.insert(tk.END, report_text)
+            elif self.report_format.get() == "json":
+                self.text_widget.insert(tk.END, json.dumps(report_json, indent=4, ensure_ascii=False))
+            elif self.report_format.get() == "csv":
+                self.text_widget.insert(tk.END, report_csv)
+            
+            self.text_widget.config(state=tk.DISABLED)
         
+        self.report_format.trace_add("write", update_report_display)
+        
+        # Функция сохранения отчета
+        def save_report():
+            file_types = {
+                "txt": [("Текстовые файлы", "*.txt")],
+                "json": [("JSON файлы", "*.json")],
+                "csv": [("CSV файлы", "*.csv")]
+            }
+            
+            default_ext = {
+                "txt": ".txt",
+                "json": ".json",
+                "csv": ".csv"
+            }
+            
+            fmt = self.report_format.get()
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=default_ext[fmt],
+                filetypes=file_types[fmt],
+                initialfile=f"report_{os.path.splitext(os.path.basename(self.video_path))[0]}.{fmt}"
+            )
+            
+            if not file_path:
+                return
+            
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    if fmt == "txt":
+                        f.write(report_text)
+                    elif fmt == "json":
+                        json.dump(report_json, f, indent=4, ensure_ascii=False)
+                    elif fmt == "csv":
+                        f.write(report_csv)
+                
+                messagebox.showinfo("Успех", f"Отчет сохранен в формате {fmt.upper()}:\n{file_path}")
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Не удалось сохранить отчет:\n{str(e)}")
+        
+        # Кнопка сохранения
         ttk.Button(report_window, text="Сохранить отчет", command=save_report).pack(pady=10)
-    
     def save_video(self):
         if not self.video_path or not self.cap:
             messagebox.showwarning("Ошибка", "Сначала загрузите видео")
