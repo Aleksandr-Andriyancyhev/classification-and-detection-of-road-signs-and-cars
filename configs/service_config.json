@@ -1,0 +1,8 @@
+{
+    "name_of_classifier": "ResNet101",
+    "path_to_classifier": "resnet101_best_loss.pth",
+    "name_of_detector": "YOLOv10",
+    "path_to_detector": "best.pt",
+    "target_width": 640,
+    "target_height": 480
+}

@@ -1,0 +1,31 @@
+{
+    "width": 640,
+    "height": 480,
+    "channels": 3,
+    "objects": [
+        {
+            "xtl": 176,
+            "ytl": 217,
+            "xbr": 380,
+            "ybr": 294,
+            "class_name": "Car",
+            "tracked_id": 1000
+        },
+        {
+            "xtl": 28,
+            "ytl": 234,
+            "xbr": 178,
+            "ybr": 296,
+            "class_name": "Car",
+            "tracked_id": 1003
+        },
+        {
+            "xtl": 331,
+            "ytl": 207,
+            "xbr": 437,
+            "ybr": 257,
+            "class_name": "Car",
+            "tracked_id": 1004
+        }
+    ]
+}
